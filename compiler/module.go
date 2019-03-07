@@ -11,6 +11,8 @@ import (
 	"github.com/perlin-network/life/compiler/opcodes"
 	"github.com/perlin-network/life/utils"
 	"strings"
+	"time"
+	"fmt"
 )
 
 type Module struct {
@@ -216,12 +218,22 @@ func (m *Module) CompileForInterpreter(gp GasPolicy) (_retCode []InterpreterCode
 	numFuncImports := len(ret)
 	ret = append(ret, make([]InterpreterCode, len(m.Base.FunctionIndexSpace))...)
 
+	var disasmStart time.Time
+	var disasmTotal time.Duration
+	var compileStart time.Time
+	var compileTotal time.Duration
+
 	for i, f := range m.Base.FunctionIndexSpace {
 		//fmt.Printf("Compiling function %d (%+v) with %d locals\n", i, f.Sig, len(f.Body.Locals))
+		disasmStart = time.Now()
 		d, err := disasm.Disassemble(f, m.Base)
+		disasmElapsed := time.Since(disasmStart)
+		disasmTotal += disasmElapsed
+
 		if err != nil {
 			panic(err)
 		}
+		compileStart = time.Now()
 		compiler := NewSSAFunctionCompiler(m.Base, d)
 		compiler.CallIndexOffset = numFuncImports
 		compiler.Compile(importTypeIDs)
@@ -246,7 +258,12 @@ func (m *Module) CompileForInterpreter(gp GasPolicy) (_retCode []InterpreterCode
 			NumReturns: len(f.Sig.ReturnTypes),
 			Bytes:      compiler.Serialize(),
 		}
+		compileElapsed := time.Since(compileStart)
+		compileTotal += compileElapsed
 	}
+
+	fmt.Printf("disasm time: %s\n", disasmTotal)
+	fmt.Printf("compile time: %s\n", compileTotal)
 
 	return ret, nil
 }

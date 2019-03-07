@@ -75,12 +75,17 @@ func main() {
 		panic(err)
 	}
 
+	parseStart := time.Now()
+
 	// Instantiate a new WebAssembly VM with a few resolved imports.
 	vm, err := exec.NewVirtualMachine(input, exec.VMConfig{
 		DefaultMemoryPages:   128,
 		DefaultTableSize:     65536,
 		DisableFloatingPoint: *noFloatingPointFlag,
 	}, new(Resolver), nil)
+
+	parseElapsed := time.Since(parseStart)
+	fmt.Printf("parse/instantiation time: %s\n", parseElapsed)
 
 	if err != nil {
 		panic(err)
@@ -136,5 +141,5 @@ func main() {
 	}
 	end := time.Now()
 
-	fmt.Printf("return value = %d, duration = %v\n", ret, end.Sub(start))
+	fmt.Printf("return value = %d, exec duration = %v\n", ret, end.Sub(start))
 }
